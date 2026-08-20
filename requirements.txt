@@ -1,0 +1,21 @@
+# Core Web Framework - Handles routes, HTTP requests, HTML rendering, and user sessions
+Flask==3.0.3
+
+# Production WSGI Server - Serves Flask application on Linux production servers
+gunicorn==22.0.0
+
+# WSGI Utility Library - Core dependency for Flask handling HTTP routing and security helpers
+Werkzeug==3.0.3
+
+# Document Processing - Parses and generates Microsoft Word (.docx) files (SOP and FRD documents)
+python-docx==1.1.2
+
+# Excel Processing - Reads, extracts, and generates Microsoft Excel (.xlsx) files (RGT & rule templates)
+openpyxl==3.1.5
+
+# HTTP Client - Communicates with AI services (Ollama API, Google Gemini API, OpenAI/OpenRouter API)
+requests==2.32.3
+
+# Environment Configuration - Loads configuration settings and API keys from .env file
+python-dotenv==1.0.1
+

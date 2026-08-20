@@ -1,0 +1,104 @@
+┌──────────────────────────────────────┐
+│              USER INPUT              │
+│ Enter Business Requirement           │
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│           React Frontend             │
+│  Requirement Form                    │
+│  Upload BRD/FRD/SOP/RGT (Optional)           │
+│  Generate Button                     │
+└──────────────────┬───────────────────┘
+                   │ REST API
+                   ▼
+┌──────────────────────────────────────┐
+│             Flask API                │
+│   /generate-frd Endpoint             │
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│            RAG AGENT                 │
+│                                      │
+│ 1. Receive Requirement               │
+│ 2. Understand Intent                 │
+│ 3. Create Query Embeddings           │
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│         Embedding Model              │
+│ SentenceTransformer                  │
+│ all-MiniLM-L6-v2                     │
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│            ChromaDB                  │
+│                                      │
+│ Stored Previous FRDs                 │
+│ BRDs                                 │
+│ Templates                            │
+│ User Stories                         │
+└──────────────────┬───────────────────┘
+                   │
+      Retrieve Top Similar Documents
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│        Context Builder               │
+│                                      │
+│ Merge Requirement +                 │
+│ Similar FRDs + Templates             │
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│            GPT MODEL                 │
+│                                      │
+│ Generate FRD Sections                │
+│                                      │
+│ • Project Overview                   │
+│ • Scope                              │
+│ • Functional Requirements            │
+│ • Non Functional Requirements        │
+│ • User Roles                         │
+│ • Use Cases                          │
+│ • Workflow                           │
+│ • Acceptance Criteria                │
+│ • Traceability Matrix                │
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│      FRD Post Processing             │
+│                                      │
+│ Format Content                       │
+│ Add Headers                          │
+│ Generate Tables                      │
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│         Document Generator           │
+│                                      │
+│ Create DOCX                          │
+│ Create PDF                           │
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│          File Storage                │
+│                                      │
+│ /generated/FRD.docx                  │
+│ /generated/FRD.pdf                   │
+└──────────────────┬───────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│         Download Response            │
+│                                      │
+│ Download DOCX                        │
+│ Download PDF                         │
+└──────────────────────────────────────┘

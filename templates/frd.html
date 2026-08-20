@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FRD — {{ frd.call_id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background:#f5f7fa; }
+        .hero { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:#fff; padding:40px 0; margin-bottom:30px; }
+        .sec { background:#fff; border-radius:15px; padding:25px; margin-bottom:20px; box-shadow:0 2px 15px rgba(0,0,0,0.08); }
+        .sec-title { color:#667eea; font-weight:700; border-bottom:3px solid #667eea; padding-bottom:10px; margin-bottom:18px; }
+        .rule { background:#f8f9fa; border-left:4px solid #667eea; padding:12px 15px; margin-bottom:10px; border-radius:0 8px 8px 0; }
+        .step { border:1px solid #e9ecef; border-radius:10px; padding:15px; margin-bottom:10px; display:flex; gap:15px; }
+        .step-num { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:#fff; width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; flex-shrink:0; }
+        .test { background:#e8f5e9; border-left:4px solid #4caf50; padding:10px; margin-bottom:8px; border-radius:0 8px 8px 0; }
+        .delta { background:#fff3e0; border-left:4px solid #ff9800; padding:10px; margin-bottom:8px; border-radius:0 8px 8px 0; }
+        .fab { position:fixed; bottom:30px; right:30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:#fff; border:none; padding:15px 30px; border-radius:50px; box-shadow:0 10px 30px rgba(102,126,234,0.4); }
+        .ai-chip { background: linear-gradient(135deg, #00b09b 0%, #96c93d 100%); color:#fff; font-size:12px; padding:4px 12px; border-radius:20px; }
+        .drawio-preview { min-height:620px; }
+        .flow-fallback { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(200px, 1fr); gap:0; overflow-x:auto; min-height:460px; }
+        .flow-lane { min-width:200px; border:1px solid #b7c9e2; background:#f7faff; }
+        .flow-lane-title { background:#dae8fc; color:#1f4e79; font-weight:700; padding:10px; text-align:center; border-bottom:1px solid #b7c9e2; }
+        .flow-node { position:relative; margin:28px 18px; padding:12px 10px; min-height:60px; display:flex; align-items:center; justify-content:center; text-align:center; background:#d5e8d4; border:1px solid #82b366; border-radius:8px; }
+        .flow-node:not(:last-child)::after { content:'↓'; position:absolute; top:100%; color:#6c8ebf; font-size:22px; line-height:28px; }
+    </style>
+    <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+</head>
+<body>
+<!-- Loading Overlay -->
+<div id="page-loader" class="loader-overlay">
+    <div class="loader-content">
+        <div class="loader-spinner">
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring ring-2"></div>
+            <div class="spinner-ring ring-3"></div>
+            <div class="loader-icon">📄</div>
+        </div>
+        <div class="loader-text">Preparing FRD</div>
+        <div class="loader-dots">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+        </div>
+    </div>
+</div>
+<style>
+    .loader-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex; align-items: center; justify-content: center;
+        transition: opacity 0.6s ease, visibility 0.6s ease;
+    }
+    .loader-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .loader-content { text-align: center; }
+    .loader-spinner { position: relative; width: 120px; height: 120px; margin: 0 auto 24px; }
+    .spinner-ring {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        border: 3px solid transparent; border-top-color: rgba(255,255,255,0.9);
+        border-radius: 50%; animation: spin 1.2s linear infinite;
+    }
+    .ring-2 { width: 85px; height: 85px; top: 17.5px; left: 17.5px; border-top-color: rgba(255,255,255,0.5); animation-duration: 1.8s; animation-direction: reverse; }
+    .ring-3 { width: 55px; height: 55px; top: 32.5px; left: 32.5px; border-top-color: rgba(255,255,255,0.3); animation-duration: 2.4s; }
+    .loader-icon {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        font-size: 30px; animation: pulse 1.5s ease-in-out infinite;
+    }
+    .loader-text { color: #fff; font-size: 18px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px; }
+    .loader-dots { display: flex; justify-content: center; gap: 6px; }
+    .dot {
+        width: 8px; height: 8px; background: rgba(255,255,255,0.7); border-radius: 50%;
+        animation: bounce 1.4s ease-in-out infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.15); } }
+    @keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+</style>
+<script>
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            document.getElementById('page-loader').classList.add('hidden');
+        }, 400);
+    });
+</script>
+<div class="hero">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="fw-bold">Functional Requirement Document</h1>
+            <p class="mb-0 opacity-75">Synthesized from SOP + RGT {% if frd.ai_enhanced %}<span class="ai-chip">⚡ AI Enhanced</span>{% endif %}</p>
+        </div>
+        <div class="text-end">
+            <span class="badge bg-light text-dark fs-6">📅 {{ frd.generated_at }}</span>
+            <div class="mt-2">
+                <a href="{{ url_for('logout') }}" class="btn btn-light btn-sm">Logout</a>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container mb-5">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="sec">
+                <h3 class="sec-title">📌 Call Identification</h3>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="text-muted small">Call ID</div>
+                        <div class="fw-bold fs-5">{{ frd.call_id }}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="text-muted small">Priority</div>
+                        <div><span class="badge bg-danger">{{ frd.priority }}</span></div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="text-muted small">Call Summary</div>
+                        <div class="fw-bold">{{ frd.call_summary }}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="text-muted small">Process Change</div>
+                        <div class="fw-bold">{{ frd.process_change }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="sec h-100">
+                <h3 class="sec-title">🎯 Products</h3>
+                {% for p in frd.products_impacted %}<span class="badge bg-primary me-2 mb-2">{{ p }}</span>{% else %}
+                <span class="badge bg-secondary me-2">ULIP</span><span class="badge bg-secondary me-2">Term</span><span class="badge bg-secondary me-2">Endowment</span>{% endfor %}
+                <div class="mt-3 text-muted small">Platforms</div>
+                <div>{{ frd.applicable_platform }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="sec"><h3 class="sec-title">🎯 Objective</h3><p>{{ frd.objective }}</p></div>
+    <div class="sec">
+        <h3 class="sec-title">📋 Business Requirements</h3>
+        {% for r in frd.business_requirement %}<div class="rule">{{ r }}</div>{% else %}<div class="alert alert-info">No requirements extracted.</div>{% endfor %}
+    </div>
+    <div class="row">
+        <div class="col-md-6"><div class="sec h-100"><h3 class="sec-title">🔄 Current Process</h3><p>{{ frd.current_process }}</p></div></div>
+        <div class="col-md-6"><div class="sec h-100"><h3 class="sec-title">✨ Future Process</h3><p>{{ frd.future_process }}</p></div></div>
+    </div>
+    {% if frd.process_steps or frd.drawio_xml %}
+    <div class="sec">
+        <h3 class="sec-title">🔀 Process Flow Diagram & Transformation</h3>
+        {% if frd.process_flow_chain %}
+        <div class="alert alert-light border mb-4">
+            <strong class="text-primary d-block mb-1">🔗 Process Execution Flow Chain:</strong>
+            <div class="small fw-bold text-dark">{{ frd.process_flow_chain }}</div>
+        </div>
+        {% endif %}
+        {% if frd.drawio_xml %}
+        {% set flow_actors = [] %}
+        {% for step in frd.process_steps %}
+            {% if step.actor not in flow_actors %}{% set _ = flow_actors.append(step.actor) %}{% endif %}
+        {% endfor %}
+        <div class="flow-fallback" aria-label="Process flow diagram">
+            {% for actor in flow_actors %}
+            <div class="flow-lane">
+                <div class="flow-lane-title">{{ actor }}</div>
+                {% for step in frd.process_steps if step.actor == actor %}
+                <div class="flow-node">{{ step.description }}</div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    <div class="row">
+        <div class="col-md-6">
+            <div class="sec">
+                <h3 class="sec-title">👥 Stakeholders</h3>
+                {% for s in frd.stakeholders %}<div class="mb-2 d-flex align-items-center"><div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width:28px;height:28px;font-size:12px;">{{ loop.index }}</div>{{ s }}</div>{% endfor %}
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="sec">
+                <h3 class="sec-title">🔗 Dependencies</h3>
+                <ul class="list-group list-group-flush">{% for d in frd.dependencies %}<li class="list-group-item px-0">✓ {{ d }}</li>{% endfor %}</ul>
+            </div>
+        </div>
+    </div>
+    <div class="sec">
+        <h3 class="sec-title">🚫 Out of Scope</h3>
+        <div class="row">{% for o in frd.out_of_scope %}<div class="col-md-6 mb-2 text-danger">✗ {{ o }}</div>{% endfor %}</div>
+    </div>
+    {% if frd.assumptions %}
+    <div class="sec">
+        <h3 class="sec-title">🧠 AI Assumptions</h3>
+        {% for a in frd.assumptions %}<div class="alert alert-info">{{ a }}</div>{% endfor %}
+    </div>
+    {% endif %}
+    {% if frd.compliance_notes %}
+    <div class="sec">
+        <h3 class="sec-title">📜 Compliance Notes</h3>
+        <p>{{ frd.compliance_notes }}</p>
+    </div>
+    {% endif %}
+    {% if frd.risk_flags %}
+    <div class="sec">
+        <h3 class="sec-title">🚩 Risk Flags</h3>
+        {% for rf in frd.risk_flags %}<div class="alert alert-warning">⚠️ {{ rf }}</div>{% endfor %}
+    </div>
+    {% endif %}
+    {% if frd.functional_scope %}
+    <div class="sec">
+        <h3 class="sec-title">🧩 Functional Scope</h3>
+        <ul>{% for item in frd.functional_scope %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    {% if frd.non_functional_requirements %}
+    <div class="sec">
+        <h3 class="sec-title">⚙️ Non-Functional Requirements</h3>
+        <ul>{% for item in frd.non_functional_requirements %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    {% if frd.acceptance_criteria %}
+    <div class="sec">
+        <h3 class="sec-title">✅ Acceptance Criteria</h3>
+        <ul>{% for item in frd.acceptance_criteria %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    <div class="sec">
+        <h3 class="sec-title">⚖️ Business Rules</h3>
+        {% for r in frd.business_rules %}<div class="rule"><strong>Rule {{ loop.index }}:</strong> {{ r }}</div>{% endfor %}
+    </div>
+    <div class="sec">
+        <h3 class="sec-title">📝 Process Steps</h3>
+        {% for s in frd.process_steps %}
+        <div class="step">
+            <div class="step-num">{{ s.step }}</div>
+            <div><div class="fw-bold">{{ s.actor }}</div><div class="text-muted">{{ s.description }}</div></div>
+        </div>
+        {% endfor %}
+    </div>
+    {% if frd.test_scenarios %}
+    <div class="sec">
+        <h3 class="sec-title">🧪 Test Scenarios</h3>
+        {% for t in frd.test_scenarios %}
+        <div class="test">
+            <div class="fw-bold text-success">{{ t.scenario[:140] }}{% if t.scenario|length > 140 %}…{% endif %}</div>
+            <div class="small text-muted mt-1"><strong>Module:</strong> {{ t.module }} | <strong>Condition:</strong> {{ t.condition }} | <strong>Expected:</strong> {{ t.expected }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if frd.delta_features %}
+    <div class="sec">
+        <h3 class="sec-title">Δ Delta Features</h3>
+        {% for d in frd.delta_features %}
+        <div class="delta">
+            <div class="fw-bold text-warning">{{ d.functionality[:120] }}{% if d.functionality|length > 120 %}…{% endif %}</div>
+            <div class="small mt-1"><strong>Expected:</strong> {{ d.expected[:180] }}{% if d.expected|length > 180 %}…{% endif %}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if frd.escalation_matrix %}
+    <div class="sec">
+        <h3 class="sec-title">📈 Escalation Matrix</h3>
+        <pre class="bg-light p-3 rounded">{{ frd.escalation_matrix }}</pre>
+    </div>
+    {% endif %}
+    <div class="text-center mb-5">
+        <a href="/" class="btn btn-outline-secondary">← New Upload</a>
+    </div>
+</div>
+<a href="/download" class="btn fab">⬇ Download</a>
+</body>
+</html>
