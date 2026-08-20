@@ -471,12 +471,20 @@ def generate_frd(sop, rgt):
             'Policy surrender processing', 'Claim processing integration'
         ],
         'business_rules': rules,
-        'process_steps': steps if steps else [
-            {'step': 1, 'description': core_steps[0], 'actor': 'Branch/Servicing Team'},
-            {'step': 2, 'description': core_steps[1], 'actor': 'Business Analyst'},
-            {'step': 3, 'description': core_steps[2], 'actor': 'System / Integration Layer'},
-            {'step': 4, 'description': core_steps[3], 'actor': 'CCM / Policy Servicing'}
-        ],
+        'process_json': {
+            'process_name': 'Extracted Process',
+            'nodes': [{'id': f'N{i+1}', 'actor': s.get('actor', 'System') if isinstance(s, dict) else 'System', 'type': 'process', 'label': s.get('description', s) if isinstance(s, dict) else str(s)[:50]} for i, s in enumerate(steps)] if steps else [
+                {'id': 'N1', 'actor': 'Branch/Servicing Team', 'type': 'process', 'label': core_steps[0]},
+                {'id': 'N2', 'actor': 'Business Analyst', 'type': 'process', 'label': core_steps[1]},
+                {'id': 'N3', 'actor': 'System / Integration Layer', 'type': 'process', 'label': core_steps[2]},
+                {'id': 'N4', 'actor': 'CCM / Policy Servicing', 'type': 'process', 'label': core_steps[3]}
+            ],
+            'connections': [{'from': f'N{i+1}', 'to': f'N{i+2}'} for i in range(len(steps) - 1)] if steps else [
+                {'from': 'N1', 'to': 'N2'},
+                {'from': 'N2', 'to': 'N3'},
+                {'from': 'N3', 'to': 'N4'}
+            ]
+        },
         'test_scenarios': rgt.get_test_scenarios(),
         'delta_features': rgt.get_delta_features(),
         'products_impacted': rgt.get_products_impacted(),
@@ -523,53 +531,77 @@ def dedupe_list(items):
                 result.append(item)
     return result
 
-def generate_mermaid_diagram(process_steps):
-    """Generate Mermaid.js flowchart string for process steps."""
-    if not process_steps:
+def generate_mermaid_diagram(process_json):
+    """Generate Mermaid.js flowchart string from process_json."""
+    if not process_json or not isinstance(process_json, dict) or 'nodes' not in process_json:
         return ""
     lines = [
-        "graph TD",
-        "    classDef actorStyle fill:#667eea,stroke:#764ba2,color:#fff,font-weight:bold;",
-        "    classDef sysStyle fill:#00b09b,stroke:#96c93d,color:#fff,font-weight:bold;"
+        "flowchart LR",
+        "    classDef startend fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px;",
+        "    classDef process fill:#d5e8d4,stroke:#82b366,stroke-width:2px;",
+        "    classDef decision fill:#ffe6cc,stroke:#d79b00,stroke-width:2px;"
     ]
-    for i, s in enumerate(process_steps, 1):
-        if isinstance(s, dict):
-            actor = s.get('actor', 'System').replace('"', '').replace("'", "")
-            desc = s.get('description', f'Step {i}').replace('"', '').replace("'", "")
-        else:
-            actor = "System"
-            desc = str(s).replace('"', '').replace("'", "")
-        short_desc = (desc[:45] + '...') if len(desc) > 45 else desc
-        node_id = f"Step{i}"
-        style_cls = "actorStyle" if any(a in actor.lower() for a in ['customer', 'user', 'branch', 'ps', 'gro', 'wcc', 'agent']) else "sysStyle"
-        lines.append(f'    {node_id}["Step {i}: {actor}<br/>{short_desc}"]:::{style_cls}')
-        if i > 1:
-            prev_id = f"Step{i-1}"
-            lines.append(f'    {prev_id} --> {node_id}')
+    
+    nodes = process_json.get('nodes', [])
+    connections = process_json.get('connections', [])
+    
+    # Group nodes by actor (swimlanes)
+    actors = {}
+    for n in nodes:
+        a = n.get('actor', 'System').replace('"', '').replace("'", "")
+        if a not in actors:
+            actors[a] = []
+        actors[a].append(n)
+        
+    for actor, actor_nodes in actors.items():
+        lines.append(f'    subgraph {actor.replace(" ", "_")} ["{actor}"]')
+        for n in actor_nodes:
+            nid = n.get('id')
+            label = n.get('label', '').replace('"', '').replace("'", "")
+            ntype = n.get('type', 'process').lower()
+            if ntype in ['start', 'end']:
+                lines.append(f'        {nid}(("{label}")):::startend')
+            elif ntype == 'decision':
+                lines.append(f'        {nid}{{"{label}"}}:::decision')
+            else:
+                lines.append(f'        {nid}["{label}"]:::process')
+        lines.append('    end')
+        
+    for c in connections:
+        src = c.get('from')
+        dst = c.get('to')
+        lbl = c.get('label', '').replace('"', '')
+        if src and dst:
+            if lbl:
+                lines.append(f'    {src} -- "{lbl}" --> {dst}')
+            else:
+                lines.append(f'    {src} --> {dst}')
+                
     return "\n".join(lines)
 
 
-def generate_drawio_xml(process_steps):
-    """Generate a Draw.io swimlane diagram for process steps."""
+def generate_drawio_xml(process_json):
+    """Generate a Draw.io swimlane diagram from process_json."""
     import html
-    if not process_steps:
+    if not process_json or not isinstance(process_json, dict) or 'nodes' not in process_json:
         return ""
 
-    normalized_steps = []
+    nodes = process_json.get('nodes', [])
+    connections = process_json.get('connections', [])
+    
+    if not nodes:
+        return ""
+
     actors = []
-    for index, step in enumerate(process_steps, start=1):
-        if isinstance(step, dict):
-            actor = str(step.get('actor') or 'System').strip() or 'System'
-            description = str(step.get('description') or f'Step {index}').strip()
-        else:
-            actor = 'System'
-            description = str(step).strip()
+    for n in nodes:
+        actor = str(n.get('actor', 'System')).strip() or 'System'
         if actor not in actors:
             actors.append(actor)
-        normalized_steps.append((actor, description))
 
     lane_width = 240
-    lane_height = max(180, len(normalized_steps) * 120 + 60)
+    # Calculate lane height based on the maximum number of nodes in any single actor's lane
+    max_nodes_in_lane = max((sum(1 for n in nodes if str(n.get('actor', 'System')).strip() == actor) for actor in actors), default=0)
+    lane_height = max(180, max_nodes_in_lane * 120 + 60)
     node_width = 200
     node_height = 60
     lane_x = {actor: index * lane_width for index, actor in enumerate(actors)}
@@ -582,48 +614,61 @@ def generate_drawio_xml(process_steps):
         '        <mxCell id="1" parent="0" />'
     ]
 
-    # Swimlanes are vertical columns; child geometry is relative to its lane.
+    # Swimlanes
     next_id = 2
+    lane_ids = {}
     for actor in actors:
         lane_id = str(next_id)
+        lane_ids[actor] = lane_id
         next_id += 1
         xml.append(f'        <mxCell id="{lane_id}" value="{html.escape(actor)}" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="1">')
         xml.append(f'          <mxGeometry x="{lane_x[actor]}" y="0" width="{lane_width}" height="{lane_height}" as="geometry" />')
         xml.append('        </mxCell>')
 
-    node_ids = []
+    # Nodes
+    node_ids = {}
     row_by_actor = {actor: 0 for actor in actors}
-    for index, (actor, description) in enumerate(normalized_steps):
-        lower_description = description.lower()
-        if any(word in lower_description for word in ('start', 'begin', 'initiated')):
+    for n in nodes:
+        actor = str(n.get('actor', 'System')).strip() or 'System'
+        label = str(n.get('label', '')).strip()
+        ntype = str(n.get('type', 'process')).strip().lower()
+        nid = str(n.get('id', ''))
+        
+        lower_label = label.lower()
+        if ntype == 'start' or 'start' in lower_label or 'begin' in lower_label:
             style = 'ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;'
-        elif any(word in lower_description for word in ('decision', 'if ', 'whether', 'check ', 'validate')):
+        elif ntype == 'decision' or '?' in lower_label:
             style = 'rhombus;whiteSpace=wrap;html=1;fillColor=#ffe6cc;'
-        elif any(word in lower_description for word in ('database', 'record', 'system of record', 'save ', 'store ')):
-            style = 'shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#f8cecc;'
-        elif any(word in lower_description for word in ('document', 'report', 'generate pdf', 'send letter')):
-            style = 'shape=document;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#e1d5e7;'
-        elif any(word in lower_description for word in ('end', 'complete', 'completed', 'finish')):
+        elif ntype == 'end' or 'finish' in lower_label or 'complete' in lower_label:
             style = 'ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;'
         else:
             style = 'rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;'
 
         row = row_by_actor[actor]
         row_by_actor[actor] += 1
-        node_id = str(next_id)
+        mx_id = str(next_id)
+        node_ids[nid] = mx_id
         next_id += 1
-        node_ids.append(node_id)
-        label = f"{html.escape(description)}"
-        xml.append(f'        <mxCell id="{node_id}" value="{label}" style="{style}" vertex="1" parent="{actors.index(actor) + 2}">')
+        
+        xml.append(f'        <mxCell id="{mx_id}" value="{html.escape(label)}" style="{style}" vertex="1" parent="{lane_ids[actor]}">')
         xml.append(f'          <mxGeometry x="20" y="{40 + row * 120}" width="{node_width}" height="{node_height}" as="geometry" />')
         xml.append('        </mxCell>')
 
-    for index in range(1, len(node_ids)):
-        edge_id = str(next_id)
-        next_id += 1
-        xml.append(f'        <mxCell id="{edge_id}" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="{node_ids[index - 1]}" target="{node_ids[index]}">')
-        xml.append('          <mxGeometry relative="1" as="geometry" />')
-        xml.append('        </mxCell>')
+    # Edges
+    for c in connections:
+        src = str(c.get('from', ''))
+        dst = str(c.get('to', ''))
+        edge_label = str(c.get('label', '')).strip()
+        
+        if src in node_ids and dst in node_ids:
+            edge_id = str(next_id)
+            next_id += 1
+            if edge_label:
+                xml.append(f'        <mxCell id="{edge_id}" value="{html.escape(edge_label)}" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="{node_ids[src]}" target="{node_ids[dst]}">')
+            else:
+                xml.append(f'        <mxCell id="{edge_id}" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;" edge="1" parent="1" source="{node_ids[src]}" target="{node_ids[dst]}">')
+            xml.append('          <mxGeometry relative="1" as="geometry" />')
+            xml.append('        </mxCell>')
 
     xml.extend([
         '      </root>',
@@ -797,7 +842,12 @@ def clean_and_dedupe_frd(frd):
         if field in frd and isinstance(frd[field], list):
             frd[field] = dedupe_list(frd[field])
             
-    if 'process_steps' in frd and isinstance(frd['process_steps'], list):
+    if 'process_json' in frd and isinstance(frd['process_json'], dict):
+        pass # Trust AI structured JSON
+    elif 'process_steps' in frd and isinstance(frd['process_steps'], list):
+        # Backward compatibility conversion to process_json
+        nodes = []
+        connections = []
         seen_steps = set()
         clean_steps = []
         for step in frd['process_steps']:
@@ -810,11 +860,18 @@ def clean_and_dedupe_frd(frd):
                 desc = step.strip().lower()
                 if desc and desc not in seen_steps:
                     seen_steps.add(desc)
-                    clean_steps.append({'step': len(clean_steps)+1, 'actor': 'System', 'description': step})
+                    clean_steps.append({'actor': 'System', 'description': step})
+                    
         for i, s in enumerate(clean_steps, 1):
-            if isinstance(s, dict):
-                s['step'] = i
-        frd['process_steps'] = clean_steps
+            nodes.append({'id': f'N{i}', 'actor': s.get('actor', 'System'), 'type': 'process', 'label': s.get('description', f'Step {i}')})
+            if i < len(clean_steps):
+                connections.append({'from': f'N{i}', 'to': f'N{i+1}'})
+        
+        frd['process_json'] = {
+            'process_name': 'Legacy Converted Flow',
+            'nodes': nodes,
+            'connections': connections
+        }
 
     if 'delta_features' in frd and isinstance(frd['delta_features'], list):
         seen_deltas = set()
@@ -839,9 +896,10 @@ def clean_and_dedupe_frd(frd):
         frd['test_scenarios'] = clean_tests
 
     # Generate Mermaid diagram & process flow step chain
-    frd['mermaid_diagram'] = generate_mermaid_diagram(frd.get('process_steps', []))
-    frd['drawio_xml'] = generate_drawio_xml(frd.get('process_steps', []))
-    flow_nodes = [f"[{s['actor']}: {s['description'][:35]}]" for s in frd.get('process_steps', []) if isinstance(s, dict)]
+    pjson = frd.get('process_json', {})
+    frd['mermaid_diagram'] = generate_mermaid_diagram(pjson)
+    frd['drawio_xml'] = generate_drawio_xml(pjson)
+    flow_nodes = [f"[{n.get('actor', 'System')}: {n.get('label', '')[:35]}]" for n in pjson.get('nodes', [])]
     frd['process_flow_chain'] = " -> ".join(flow_nodes)
 
     return frd

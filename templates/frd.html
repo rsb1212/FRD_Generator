@@ -151,20 +151,13 @@
         </div>
         {% endif %}
         {% if frd.drawio_xml %}
-        {% set flow_actors = [] %}
-        {% for step in frd.process_steps %}
-            {% if step.actor not in flow_actors %}{% set _ = flow_actors.append(step.actor) %}{% endif %}
-        {% endfor %}
-        <div class="flow-fallback" aria-label="Process flow diagram">
-            {% for actor in flow_actors %}
-            <div class="flow-lane">
-                <div class="flow-lane-title">{{ actor }}</div>
-                {% for step in frd.process_steps if step.actor == actor %}
-                <div class="flow-node">{{ step.description }}</div>
-                {% endfor %}
+        {% if frd.mermaid_diagram %}
+        <div style="overflow: auto; max-height: 80vh; border: 1px solid #eee; padding: 15px; border-radius: 8px; width: 100%;">
+            <div class="mermaid text-center" style="min-width: 2000px;">
+                {{ frd.mermaid_diagram | safe }}
             </div>
-            {% endfor %}
         </div>
+        {% endif %}
         {% endif %}
     </div>
     {% endif %}
@@ -268,5 +261,7 @@
     </div>
 </div>
 <a href="/download" class="btn fab">⬇ Download</a>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true});</script>
 </body>
 </html>
