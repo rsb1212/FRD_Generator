@@ -537,9 +537,9 @@ def generate_mermaid_diagram(process_json):
         return ""
     lines = [
         "flowchart LR",
-        "    classDef startend fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px;",
-        "    classDef process fill:#d5e8d4,stroke:#82b366,stroke-width:2px;",
-        "    classDef decision fill:#ffe6cc,stroke:#d79b00,stroke-width:2px;"
+        "    classDef startend fill:#667eea,stroke:#764ba2,color:#fff,stroke-width:2px,font-weight:bold,rx:30,ry:30;",
+        "    classDef process fill:#00b09b,stroke:#0f8a7c,color:#fff,stroke-width:2px,font-weight:bold,rx:8,ry:8;",
+        "    classDef decision fill:#ff9800,stroke:#f57c00,color:#fff,stroke-width:2px,font-weight:bold;"
     ]
     
     nodes = process_json.get('nodes', [])
@@ -559,9 +559,11 @@ def generate_mermaid_diagram(process_json):
             nid = n.get('id')
             label = n.get('label', '').replace('"', '').replace("'", "")
             ntype = n.get('type', 'process').lower()
-            if ntype in ['start', 'end']:
+            lower_label = label.lower()
+            
+            if ntype in ['start', 'end'] or 'start' in lower_label or 'begin' in lower_label or 'end' in lower_label or 'finish' in lower_label:
                 lines.append(f'        {nid}(("{label}")):::startend')
-            elif ntype == 'decision':
+            elif ntype == 'decision' or '?' in lower_label or 'if ' in lower_label or 'decision' in lower_label:
                 lines.append(f'        {nid}{{"{label}"}}:::decision')
             else:
                 lines.append(f'        {nid}["{label}"]:::process')

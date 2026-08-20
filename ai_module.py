@@ -341,7 +341,7 @@ Generate a complete FRD as STRICT JSON with these exact keys:
 - dependencies (list of strings)
 - out_of_scope (list of strings)
 - business_rules (list of strings)
-- process_json (object representing a flowchart, containing: "process_name" (string), "nodes" (list of objects: id, actor, type (start/process/decision/end), label), and "connections" (list of objects: from, to, label (optional)))
+- process_json (object representing a flowchart, containing: "process_name" (string), "nodes" (list of objects: id, actor, type (start/process/decision/end), label - MUST use simple jargon-free language for non-technical users and start with a relevant emoji like 👤, 💻, 📄, ⚙️), and "connections" (list of objects: from, to, label (optional)))
 - assumptions (list of strings)
 - compliance_notes (string)
 - risk_flags (list of strings)
