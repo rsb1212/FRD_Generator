@@ -1,6 +1,11 @@
 # FRD_Generator
 
-"""
+""" 
+
+Target uri-https://bl-prod02-opai-productchangeanalyzer-01.openai.azure.com/openai/responses?api-version=2025-04-01-preview
+key-
+
+
 Example: turning FRD requirement text into a draw.io diagram automatically.
 
 The idea in 3 steps:
